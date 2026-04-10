@@ -1,0 +1,1172 @@
+<html lang="zh-CN"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>原神英语短语抽卡小游戏</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#7E57C2',
+                        fiveStar: '#FFD700',
+                        fourStar: '#C0C0C0',
+                        bgDark: '#1A1A2E',
+                        bgLight: '#F5F5F7',
+                        wordCount: '#4CAF50'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .card-glow {
+                box-shadow: 0 0 15px rgba(255, 215, 0, 0.7);
+            }
+            .four-star-glow {
+                box-shadow: 0 0 15px rgba(192, 192, 192, 0.7);
+            }
+            .pull-animation {
+                animation: pull 0.8s ease-out;
+            }
+            @keyframes pull {
+                0% { transform: translateY(0); }
+                50% { transform: translateY(20px); }
+                100% { transform: translateY(0); }
+            }
+            .shine {
+                animation: shine 1s ease-in-out infinite;
+            }
+            @keyframes shine {
+                0% { box-shadow: 0 0 5px rgba(255, 215, 0, 0.5); }
+                50% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.8); }
+                100% { box-shadow: 0 0 5px rgba(255, 215, 0, 0.5); }
+            }
+            .character-appear {
+                animation: appear 0.5s ease-out;
+            }
+            @keyframes appear {
+                0% { opacity: 0; transform: scale(0.8); }
+                70% { transform: scale(1.1); }
+                100% { opacity: 1; transform: scale(1); }
+            }
+            .card-flip {
+                animation: flip 0.6s ease-out;
+                transform-style: preserve-3d;
+                backface-visibility: hidden;
+            }
+            @keyframes flip {
+                0% { transform: rotateY(0deg); }
+                50% { transform: rotateY(90deg); }
+                100% { transform: rotateY(0deg); }
+            }
+            .word-change {
+                animation: wordChange 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+            }
+            @keyframes wordChange {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.3); }
+                100% { transform: scale(1); }
+            }
+            .word-up {
+                color: #ff4444;
+            }
+            .word-down {
+                color: #00C851;
+            }
+            .modal-enter {
+                animation: modalEnter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            }
+            @keyframes modalEnter {
+                0% { opacity: 0; transform: scale(0.8); }
+                100% { opacity: 1; transform: scale(1); }
+            }
+            .modal-exit {
+                animation: modalExit 0.3s ease-out;
+            }
+            @keyframes modalExit {
+                0% { opacity: 1; transform: scale(1); }
+                100% { opacity: 0; transform: scale(0.9); }
+            }
+            .scroll-hint {
+                animation: pulse 2s infinite;
+            }
+            @keyframes pulse {
+                0% { opacity: 0.6; }
+                50% { opacity: 1; }
+                100% { opacity: 0.6; }
+            }
+            .character-card-hover {
+                transition: transform 0.3s ease, box-shadow 0.3s ease;
+            }
+            .character-card-hover:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+                cursor: pointer;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-bgDark to-primary/80 min-h-screen text-white font-sans">
+    <div class="container mx-auto px-4 py-8 max-w-5xl" id="main-content">
+        <!-- 游戏标题 -->
+        <header class="text-center mb-8">
+            <h1 class="text-[clamp(1.8rem,4vw,2.5rem)] font-bold mb-2 text-white">原神英语短语抽卡</h1>
+            <p class="text-gray-300">抽取角色，学习英语短语！</p>
+        </header>
+
+        <!-- 游戏控制面板 -->
+        <div class="bg-white/10 backdrop-blur-md rounded-xl p-6 mb-8 shadow-lg">
+            <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+                <div class="flex flex-wrap gap-6">
+                    <div class="flex items-center">
+                        <div class="w-4 h-4 rounded-full bg-fiveStar mr-2"></div>
+                        <span>五星角色: <span id="five-star-count" class="font-bold">0</span></span>
+                    </div>
+                    <div class="flex items-center">
+                        <div class="w-4 h-4 rounded-full bg-fourStar mr-2"></div>
+                        <span>四星角色: <span id="four-star-count" class="font-bold">0</span></span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fa fa-ticket mr-2"></i>
+                        <span>已抽次数: <span id="pull-count" class="font-bold">0</span></span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fa fa-book mr-2 text-wordCount"></i>
+                        <span>需背单词: <span id="word-count" class="font-bold word-count">0</span></span>
+                    </div>
+                </div>
+                
+                <div class="flex gap-3 items-center">
+                    <div class="flex items-center gap-2">
+                        <button id="music-toggle" class="bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors">
+                            <i class="fa fa-music" id="music-icon"></i>
+                        </button>
+                        <div class="relative w-28 hidden sm:block">
+                            <input type="range" id="music-volume" min="0" max="100" value="20" class="w-full h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer accent-fiveStar">
+                        </div>
+                    </div>
+                    
+                    <div class="relative">
+                        <input type="number" id="wish-count" min="1" max="10" value="10" class="bg-white/20 border border-white/30 rounded-lg px-4 py-2 w-20 focus:outline-none focus:ring-2 focus:ring-fiveStar">
+                        <div class="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-300">
+                            次
+                        </div>
+                    </div>
+                    <button id="pull-btn" class="bg-fiveStar hover:bg-fiveStar/80 text-bgDark font-bold py-2 px-6 rounded-lg transition-all shadow-md hover:shadow-lg flex items-center">
+                        <i class="fa fa-gift mr-2"></i> 祈愿
+                    </button>
+                </div>
+            </div>
+            
+            <div class="flex flex-wrap gap-6">
+                <div class="flex items-center">
+                    <i class="fa fa-clock-o mr-2"></i>
+                    <span>五星保底: <span id="five-star-pity" class="font-bold">0/80</span></span>
+                </div>
+                <div class="flex items-center">
+                    <i class="fa fa-clock-o mr-2"></i>
+                    <span>四星保底: <span id="four-star-pity" class="font-bold">0/10</span></span>
+                </div>
+                <div class="flex items-center">
+                    <i class="fa fa-percent mr-2"></i>
+                    <span>当前五星概率: <span id="five-star-rate" class="font-bold">0.80%</span></span>
+                </div>
+                <div class="flex items-center text-sm text-gray-300">
+                    <i class="fa fa-info-circle mr-2"></i>
+                    <span>规则: 未抽中+1，四星-3，五星-10</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 抽卡区域 -->
+        <div class="mb-8">
+            <div id="wish-area" class="bg-white/5 backdrop-blur-md rounded-xl p-6 min-h-[300px] flex items-center justify-center overflow-hidden">
+                <div class="text-center text-gray-400">
+                    <i class="fa fa-gift text-5xl mb-4"></i>
+                    <p>点击祈愿按钮开始抽卡</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 获得角色列表 -->
+        <div>
+            <h2 class="text-xl font-semibold mb-4 flex items-center">
+                <i class="fa fa-list mr-2"></i> 已获得角色
+                <span class="ml-2 text-sm font-normal text-gray-400">(点击角色查看大图)</span>
+            </h2>
+            <div id="character-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="text-center text-gray-400 col-span-full py-8">
+                    暂无角色，快去抽卡吧！
+                </div>
+            </div>
+        </div>
+
+        <!-- 卡牌放大展示弹窗 -->
+        <div id="magnify-modal" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 hidden">
+            <div id="modal-content" class="bg-bgDark rounded-xl overflow-hidden max-w-md w-full mx-4 transform transition-all">
+                <!-- 弹窗内容将动态生成 -->
+            </div>
+        </div>
+
+        <!-- 角色大图查看弹窗 -->
+        <div id="character-detail-modal" class="fixed inset-0 bg-black/90 flex items-center justify-center z-50 hidden">
+            <div id="detail-modal-content" class="max-w-3xl w-full mx-4 bg-bgDark rounded-xl overflow-hidden transform transition-all">
+                <!-- 角色大图内容将动态生成 -->
+            </div>
+        </div>
+
+        <!-- 音效与背景音乐 -->
+        <audio id="pull-sound" preload="auto">
+            <source src="https://assets.mixkit.co/sfx/preview/mixkit-unlocking-5633.mp3" type="audio/mpeg">
+        </audio>
+        <audio id="five-star-sound" preload="auto">
+            <source src="https://assets.mixkit.co/sfx/preview/mixkit-achievement-bell-600.mp3" type="audio/mpeg">
+        </think>superscript:
+        <audio id="four-star-sound" preload="auto">
+            <source src="D:\桌面\ysaudio\音效\xiaowin.wav" type="audio/mpeg">
+        <RichMediaReference>superscript:
+        <audio id="word-increase-sound" preload="auto">
+            <source src="https://assets.mixkit.co/sfx/preview/mixkit-negative-guitar-tone-232.mp3" type="audio/mpeg">
+         <RichMediaReference>superscript:
+        <audio id="word-decrease-sound" preload="auto">
+            <source src="https://assets.mixkit.co/sfx/preview/mixkit-achievement-bell-600.mp3" type="audio/mpeg">
+         <RichMediaReference>superscript:
+        
+        <!-- 角色语音音效 - 根据提供的路径更新 -->
+        <audio id="xiangling-voice" preload="auto">
+            <source src="D:\桌面\ysaudio\角色语音\xiangling.mp3" type="audio/mpeg">
+        <RichMediaReference>superscript:
+        <audio id="xingqiu-voice" preload="auto">
+            <source src="D:\桌面\ysaudio\角色语音\xingqiu.mp3" type="audio/mpeg">
+        <RichMediaReference>superscript:
+        <audio id="yanfei-voice" preload="auto">
+            <source src="D:\桌面\ysaudio\角色语音\yanfei.mp3" type="audio/mpeg">
+        <RichMediaReference>superscript:
+        <audio id="barbara-voice" preload="auto">
+            <source src="D:\桌面\ysaudio\角色语音\Barbara.mp3" type="audio/mpeg">
+        <RichMediaReference>superscript:
+        <audio id="bennett-voice" preload="auto">
+            <source src="D:\桌面\ysaudio\角色语音\Bennett.mp3" type="audio/mpeg">
+        <RichMediaReference>superscript:
+        <audio id="chongyun-voice" preload="auto">
+            <source src="D:\桌面\ysaudio\角色语音\Chongyun.mp3" type="audio/mpeg">
+        <RichMediaReference>superscript:
+        <audio id="dehya-voice" preload="auto">
+            <source src="D:\桌面\ysaudio\角色语音\Dehya.mp3" type="audio/mpeg">
+        <RichMediaReference>superscript:
+        <audio id="diona-voice" preload="auto">
+            <source src="D:\桌面\ysaudio\角色语音\Diona.mp3" type="audio/mpeg">
+        <RichMediaReference>superscript:
+        <audio id="faruzan-voice" preload="auto">
+            <source src="D:\桌面\ysaudio\角色语音\Faruzan.mp3" type="audio/mpeg">
+        <RichMediaReference>superscript:
+        <audio id="fischl-voice" preload="auto">
+            <source src="D:\桌面\ysaudio\角色语音\Fischl.mp3" type="audio/mpeg">
+        <RichMediaReference>superscript:
+        <audio id="furina-voice" preload="auto">
+            <source src="D:\桌面\ysaudio\角色语音\Furina.mp3" type="audio/mpeg">
+        <RichMediaReference>superscript:
+        <audio id="jean-voice" preload="auto">
+            <source src="D:\桌面\ysaudio\角色语音\Jean.mp3" type="audio/mpeg">
+        <RichMediaReference>superscript:
+        <audio id="keqing-voice" preload="auto">
+            <source src="D:\桌面\ysaudio\角色语音\keqing.mp3" type="audio/mpeg">
+        <RichMediaReference>superscript:
+        <audio id="mona-voice" preload="auto">
+            <source src="D:\桌面\ysaudio\角色语音\Mona.mp3" type="audio/mpeg">
+        <RichMediaReference>superscript:
+        <audio id="ningguang-voice" preload="auto">
+            <source src="D:\桌面\ysaudio\角色语音\Ningguang.mp3" type="audio/mpeg">
+        <RichMediaReference>superscript:
+        <audio id="noelle-voice" preload="auto">
+            <source src="D:\桌面\ysaudio\角色语音\Noelle.mp3" type="audio/mpeg">
+        <RichMediaReference>superscript:
+        <audio id="qiqi-voice" preload="auto">
+            <source src="D:\桌面\ysaudio\角色语音\Qiqi.mp3" type="audio/mpeg">
+        <RichMediaReference>superscript:
+        <audio id="rosaria-voice" preload="auto">
+            <source src="D:\桌面\ysaudio\角色语音\Rosaria.mp3" type="audio/mpeg">
+        <RichMediaReference>superscript:
+        <audio id="sangonomiya-kokomi-voice" preload="auto">
+            <source src="D:\桌面\ysaudio\角色语音\Sangonomiya Kokomi.mp3" type="audio/mpeg">
+        <RichMediaReference>superscript:
+        <audio id="sayu-voice" preload="auto">
+            <source src="D:\桌面\ysaudio\角色语音\Sayu.mp3" type="audio/mpeg">
+        <RichMediaReference>superscript:
+        <audio id="sucrose-voice" preload="auto">
+            <source src="D:\桌面\ysaudio\角色语音\Sucrose.mp3" type="audio/mpeg">
+        <RichMediaReference>superscript:
+        <audio id="thoma-voice" preload="auto">
+            <source src="D:\桌面\ysaudio\角色语音\Thoma.mp3" type="audio/mpeg">
+        <RichMediaReference>superscript:
+        <audio id="tighnari-voice" preload="auto">
+            <source src="D:\桌面\ysaudio\角色语音\Tighnari.mp3" type="audio/mpeg">
+        <RichMediaReference>superscript:
+          <audio id="beidou-voice" preload="auto">
+            <source src="D:\桌面\ysaudio\角色语音\Beidou.mp3" type="audio/mpeg">
+        <RichMediaReference>superscript:
+        <audio id="default-4star-voice" preload="auto">
+            <source src="https://assets.mixkit.co/sfx/preview/mixkit-character-confirmation-voice-1359.mp3" type="audio/mpeg">
+         <RichMediaReference>superscript:
+
+        <!-- 背景音乐 -->
+        <audio id="bg-music" loop="" preload="auto">
+            <source src="D:\桌面\ysaudio\音效\陈致逸,HOYO-MiX+-+Statue+of+the+Seven+七天神像.mp3" type="audio/mpeg">
+         <RichMediaReference>superscript:
+
+    <script>
+        // 背景音乐控制逻辑
+        const bgMusic = document.getElementById('bg-music');
+        const musicToggle = document.getElementById('music-toggle');
+        const musicIcon = document.getElementById('music-icon');
+        const musicVolume = document.getElementById('music-volume');
+
+        // 初始化音乐设置
+        bgMusic.volume = 0.2;
+
+        // 尝试自动播放
+        function initBackgroundMusic() {
+            const playOnInteraction = () => {
+                bgMusic.play().catch(e => {
+                    console.log("背景音乐播放需要用户交互：", e);
+                });
+                document.removeEventListener('click', playOnInteraction);
+                document.removeEventListener('keydown', playOnInteraction);
+            };
+            document.addEventListener('click', playOnInteraction);
+            document.addEventListener('keydown', playOnInteraction);
+        }
+
+        // 切换音乐播放/暂停
+        musicToggle.addEventListener('click', () => {
+            if (bgMusic.paused) {
+                bgMusic.play().catch(e => console.log("播放失败：", e));
+                musicIcon.className = 'fa fa-pause';
+            } else {
+                bgMusic.pause();
+                musicIcon.className = 'fa fa-music';
+            }
+        });
+
+        // 调节音量
+        musicVolume.addEventListener('input', () => {
+            bgMusic.volume = musicVolume.value / 100;
+        });
+
+        // 预加载图片以提高性能
+        function preloadImages() {
+            const imageUrls = Object.values(phraseDatabase).map(item => item.imageUrl);
+            imageUrls.forEach(url => {
+                const img = new Image();
+                img.src = url;
+            });
+        }
+
+        // 单词库 - 添加了所有提供的新单词
+        const wordBank = [
+            // 职业类
+            { word: "business person", meaning: "n. 商务人士" },
+            { word: "businessman", meaning: "n. 商人" },
+            { word: "clerk", meaning: "n. 职员，店员" },
+            { word: "cook", meaning: "n. 厨师 v. 烹饪" },
+            { word: "doctor", meaning: "n. 医生" },
+            { word: "driver", meaning: "n. 司机" },
+            { word: "engineer", meaning: "n. 工程师" },
+            { word: "farmer", meaning: "n. 农民" },
+            { word: "fisherman", meaning: "n. 渔民" },
+            { word: "housewife", meaning: "n. 家庭主妇" },
+            { word: "housewives", meaning: "n. 家庭主妇(复数)" },
+            { word: "mailman", meaning: "n. 邮递员" },
+            { word: "mail carrier", meaning: "n. 邮递员" },
+            { word: "nurse", meaning: "n. 护士" },
+            { word: "office worker", meaning: "n. 办公室职员" },
+            { word: "painter", meaning: "n. 画家，油漆工" },
+            { word: "policeman", meaning: "n. 警察" },
+            { word: "police officer", meaning: "n. 警官" },
+            { word: "police", meaning: "n. 警察，警方" },
+            { word: "reporter", meaning: "n. 记者" },
+            { word: "shopkeeper", meaning: "n. 店主" },
+            { word: "singer", meaning: "n. 歌手" },
+            { word: "waiter", meaning: "n. 男服务员" },
+            { word: "waitress", meaning: "n. 女服务员" },
+            { word: "worker", meaning: "n. 工人" },
+            { word: "writer", meaning: "n. 作家" },
+            
+            // 地点与方位类
+            { word: "America", meaning: "n. 美国" },
+            { word: "China", meaning: "n. 中国" },
+            { word: "Chinese", meaning: "n. 中国人，汉语 adj. 中国的" },
+            { word: "city", meaning: "n. 城市" },
+            { word: "country", meaning: "n. 国家，乡村" },
+            { word: "east", meaning: "n. 东方 adj. 东方的" },
+            { word: "north", meaning: "n. 北方 adj. 北方的" },
+            { word: "south", meaning: "n. 南方 adj. 南方的" },
+            { word: "Taiwan", meaning: "n. 台湾" },
+            { word: "west", meaning: "n. 西方 adj. 西方的" },
+            
+            // 动词类
+            { word: "am", meaning: "v. 是(第一人称单数现在时)" },
+            { word: "are", meaning: "v. 是(第二人称单复数现在时)" },
+            { word: "is", meaning: "v. 是(第三人称单数现在时)" },
+            { word: "bring", meaning: "v. 带来" },
+            { word: "take", meaning: "v. 拿走" },
+            { word: "call", meaning: "v. 呼叫，打电话" },
+            { word: "dance", meaning: "v. 跳舞 n. 舞蹈" },
+            { word: "fish", meaning: "v. 钓鱼 n. 鱼" },
+            { word: "have", meaning: "v. 有" },
+            { word: "has", meaning: "v. 有(第三人称单数)" },
+            { word: "help", meaning: "v. & n. 帮助" },
+            { word: "hurry", meaning: "v. 匆忙 n. 匆忙" },
+            { word: "know", meaning: "v. 知道，了解" },
+            { word: "like", meaning: "v. 喜欢 prep. 像" },
+            { word: "love", meaning: "v. & n. 爱" },
+            { word: "listen", meaning: "v. 听" },
+            { word: "hear", meaning: "v. 听见" },
+            { word: "make", meaning: "v. 制作，使" },
+            { word: "meet", meaning: "v. 遇见，会面" },
+            { word: "need", meaning: "v. 需要 n. 需要" },
+            { word: "rain", meaning: "v. 下雨 n. 雨" },
+            { word: "see", meaning: "v. 看见" },
+            { word: "skate", meaning: "v. 滑冰 n. 滑冰" },
+            { word: "start", meaning: "v. 开始 n. 开始" },
+            { word: "stop", meaning: "v. 停止 n. 停止" },
+            { word: "wait", meaning: "v. & n. 等待" },
+            { word: "welcome", meaning: "v. 欢迎 adj. 受欢迎的" },
+            
+            // 时间与物品类
+            { word: "afternoon", meaning: "n. 下午" },
+            { word: "evening", meaning: "n. 晚上" },
+            { word: "morning", meaning: "n. 早上" },
+            { word: "night", meaning: "n. 夜晚" },
+            { word: "birthday", meaning: "n. 生日" },
+            { word: "card", meaning: "n. 卡片" },
+            { word: "cat", meaning: "n. 猫" },
+            { word: "dog", meaning: "n. 狗" },
+            { word: "first name", meaning: "n. 名" },
+            { word: "last name", meaning: "n. 姓" },
+            { word: "name", meaning: "n. 名字 v. 命名" },
+            { word: "pet", meaning: "n. 宠物" },
+            
+            // 家庭成员类
+            { word: "aunt", meaning: "n. 阿姨，姑姑" },
+            { word: "brother", meaning: "n. 兄弟" },
+            { word: "child", meaning: "n. 孩子" },
+            { word: "classmate", meaning: "n. 同学" },
+            { word: "cousin", meaning: "n. 堂兄弟姐妹" },
+            { word: "daughter", meaning: "n. 女儿" },
+            { word: "family", meaning: "n. 家庭" },
+            { word: "father", meaning: "n. 父亲" },
+            { word: "grandfather", meaning: "n. 祖父" },
+            { word: "grandmother", meaning: "n. 祖母" },
+            { word: "husband", meaning: "n. 丈夫" },
+            { word: "car", meaning: "n. 汽车" },
+            { word: "parents", meaning: "n. 父母" },
+            { word: "parent", meaning: "n. 父亲或母亲" },
+            { word: "sister", meaning: "n. 姐妹" },
+            { word: "son", meaning: "n. 儿子" },
+            { word: "uncle", meaning: "n. 叔叔，舅舅" },
+            { word: "wife", meaning: "n. 妻子" },
+            { word: "wives", meaning: "n. 妻子(复数)" },
+            
+            // 身体部位类
+            { word: "arm", meaning: "n. 手臂" },
+            { word: "ear", meaning: "n. 耳朵" },
+            { word: "eye", meaning: "n. 眼睛" },
+            { word: "face", meaning: "n. 脸" },
+            { word: "hair", meaning: "n. 头发" },
+            { word: "hand", meaning: "n. 手" },
+            { word: "head", meaning: "n. 头" },
+            { word: "leg", meaning: "n. 腿" },
+            { word: "mouth", meaning: "n. 嘴" },
+            { word: "nose", meaning: "n. 鼻子" }
+        ];
+
+        // 当前需要背诵的单词列表
+        let wordList = [];
+
+        // 英语短语库（与原神角色绑定）- 更新了图片地址
+        const phraseDatabase = {
+            // 五星角色对应短语和立绘
+            "Sangonomiya Kokomi": {
+                "phrase": "at home", 
+                "sentence": "I often read books at home on weekends.",
+                "imageUrl": "D:\\桌面\\yspic\\Sangonomiya Kokomi.png"
+            },
+            "Keqing": {
+                "phrase": "brother and sister", 
+                "sentence": "My brother and sister always play together after school.",
+                "imageUrl": "D:\\桌面\\yspic\\keqing.png"
+            },
+            "Qiqi": {
+                "phrase": "teacher and student", 
+                "sentence": "The teacher and student are discussing the problem.",
+                "imageUrl": "D:\\桌面\\yspic\\qiqi.png"
+            },
+            "Jean": {
+                "phrase": "by the way", 
+                "sentence": "By the way, do you know where the library is?",
+                "imageUrl": "D:\\桌面\\yspic\\Jean.png"
+            },
+            "Mona": {
+                "phrase": "come on in", 
+                "sentence": "It's cold outside, come on in and have a cup of tea.",
+                "imageUrl": "D:\\桌面\\yspic\\Mona.png"
+            },
+            "Tighnari": {
+                "phrase": "fly a kite", 
+                "sentence": "We plan to fly a kite in the park tomorrow.",
+                "imageUrl": "D:\\桌面\\yspic\\Tighnari.png"
+            },
+            "Dehya": {
+                "phrase": "go fishing", 
+                "sentence": "My dad likes to go fishing by the lake.",
+                "imageUrl": "D:\\桌面\\yspic\\Dehya.png"
+            },
+            "Ningguang": {
+                "phrase": "work for", 
+                "sentence": "Her mother works for a big company.",
+                "imageUrl": "D:\\桌面\\yspic\\Ningguang.png"
+            },
+            "Furina": {
+                "phrase": "spell", 
+                "sentence": "Can your spell your name for me?",
+                "imageUrl": "D:\\桌面\\yspic\\Furina.png"
+            },
+            
+            // 四星UP角色对应短语和立绘
+            "Faruzan": {
+                "phrase": "How about you?", 
+                "sentence": "I like math. How about you?",
+                "imageUrl": "D:\\桌面\\yspic\\Faruzan.png"
+            },
+            "Rosaria": {
+                "phrase": "in front of", 
+                "sentence": "There is a big tree in front of our house.",
+                "imageUrl": "D:\\桌面\\yspic\\rosaria.png"
+            },
+            "Yanfei": {
+                "phrase": "in the future", 
+                "sentence": "I want to be a doctor in the future.",
+                "imageUrl": "D:\\桌面\\yspic\\yanfei.png"
+            },
+            
+            // 四星常驻角色对应短语和立绘
+            "Bennett": {
+                "phrase": "in your family", 
+                "sentence": "There are five people in your family.",
+                "imageUrl": "D:\\桌面\\yspic\\Benneit.png"
+            },
+            "Xiangling": {
+                "phrase": "in English", 
+                "sentence": "She can sing songs in English.",
+                "imageUrl": "D:\\桌面\\yspic\\Xiangling.png"
+            },
+            "Barbara": {
+                "phrase": "Let's play", 
+                "sentence": "Let's play badminton after class.",
+                "imageUrl": "D:\\桌面\\yspic\\Barbara.png"
+            },
+            "Xingqiu": {
+                "phrase": "listen to", 
+                "sentence": "We should listen to the teacher carefully.",
+                "imageUrl": "D:\\桌面\\yspic\\Xingqiu.png"
+            },
+            "Fischl": {
+                "phrase": "look at", 
+                "sentence": "Look at the beautiful flowers in the garden.",
+                "imageUrl": "D:\\桌面\\yspic\\Fischl.png"
+            },
+            "Noelle": {
+                "phrase": "Me too", 
+                "sentence": "I love ice cream. Me too!",
+                "imageUrl": "D:\\桌面\\yspic\\Noelle.png"
+            },
+            "Diona": {
+                "phrase": "over there", 
+                "sentence": "The bookstore is over there, near the bank.",
+                "imageUrl": "D:\\桌面\\yspic\\Diona.png"
+            },
+            "Sayu": {
+                "phrase": "Sure!", 
+                "sentence": "Can you help me? Sure!",
+                "imageUrl": "D:\\桌面\\yspic\\Sayu.png"
+            },
+            "Sucrose": {
+                "phrase": "teach math", 
+                "sentence": "Mr. Li will teach math in our class.",
+                "imageUrl": "D:\\桌面\\yspic\\Sucrose.png"
+            },
+            "Thoma": {
+                "phrase": "Thank you", 
+                "sentence": "Thank you for your wonderful gift.",
+                "imageUrl": "D:\\桌面\\yspic\\Thoma.png"
+            },
+            "Chongyun": {
+                "phrase": "It's time for", 
+                "sentence": "It's time for lunch. Let's go to the cafeteria.",
+                "imageUrl": "D:\\桌面\\yspic\\Chongyun.png"
+            },
+            "Beidou": {
+                "phrase": "You're welcome", 
+                "sentence": "Thanks a lot! You're welcome.",
+                "imageUrl": "D:\\桌面\\yspic\\Beidou.png"
+            }
+        };
+
+        // 游戏状态变量
+        let pulledCount = 0;          // 已抽次数
+        let fiveStarCount = 0;        // 五星角色数量
+        let fourStarCount = 0;        // 四星角色数量
+        let fiveStarPity = 34;        // 五星保底计数
+        let fourStarPity = 0;         // 四星保底计数
+        let ownedCharacters = {};     // 已拥有角色
+        let isPulling = false;        // 是否正在抽卡
+        let rareCards = [];           // 本轮抽卡中的稀有卡牌
+        let currentRareIndex = 0;     // 当前展示的稀有卡牌索引
+
+        // DOM元素
+        const dom = {
+            pullBtn: document.getElementById('pull-btn'),
+            wishArea: document.getElementById('wish-area'),
+            wishCountInput: document.getElementById('wish-count'),
+            fiveStarCountEl: document.getElementById('five-star-count'),
+            fourStarCountEl: document.getElementById('four-star-count'),
+            pullCountEl: document.getElementById('pull-count'),
+            fiveStarPityEl: document.getElementById('five-star-pity'),
+            fourStarPityEl: document.getElementById('four-star-pity'),
+            fiveStarRateEl: document.getElementById('five-star-rate'),
+            characterList: document.getElementById('character-list'),
+            wordCountEl: document.getElementById('word-count'),
+            pullSound: document.getElementById('pull-sound'),
+            fiveStarSound: document.getElementById('five-star-sound'),
+            fourStarSound: document.getElementById('four-star-sound'),
+            wordIncreaseSound: document.getElementById('word-increase-sound'),
+            wordDecreaseSound: document.getElementById('word-decrease-sound'),
+            mainContent: document.getElementById('main-content'),
+            magnifyModal: document.getElementById('magnify-modal'),
+            modalContent: document.getElementById('modal-content'),
+            characterDetailModal: document.getElementById('character-detail-modal'),
+            detailModalContent: document.getElementById('detail-modal-content')
+        };
+
+        // 显示单词计数变化动画
+        function showWordChangeAnimation(change) {
+            return new Promise(resolve => {
+                const originalText = dom.wordCountEl.textContent;
+                const newValue = parseInt(originalText) + change;
+                
+                dom.wordCountEl.classList.add('word-change');
+                if (change > 0) {
+                    dom.wordCountEl.classList.add('word-up');
+                } else {
+                    dom.wordCountEl.classList.add('word-down');
+                }
+                
+                let currentValue = parseInt(originalText);
+                const step = change > 0 ? 1 : -1;
+                const totalSteps = Math.abs(change);
+                let stepCount = 0;
+                
+                const updateValue = () => {
+                    currentValue += step;
+                    dom.wordCountEl.textContent = currentValue;
+                    stepCount++;
+                    
+                    if (stepCount < totalSteps) {
+                        requestAnimationFrame(updateValue);
+                    } else {
+                        dom.wordCountEl.classList.remove('word-change', 'word-up', 'word-down');
+                        resolve();
+                    }
+                };
+                
+                updateValue();
+            });
+        }
+
+        // 显示稀有卡牌弹窗
+        function showRareCardModal(card, index, total) {
+            return new Promise(resolve => {
+                const characterInfo = phraseDatabase[card.name];
+                
+                dom.modalContent.innerHTML = `
+                    <div class="relative">
+                        <div class="w-full h-64 ${card.isFiveStar ? 'bg-gradient-to-b from-amber-900/30 to-fiveStar/10' : 'bg-gradient-to-b from-gray-900/30 to-fourStar/10'}">
+                            <img src="${characterInfo.imageUrl}" alt="${card.name}" class="w-full h-full object-cover opacity-80">
+                            <div class="${card.isFiveStar ? 'text-fiveStar' : 'text-fourStar'} absolute top-3 left-3 text-lg">
+                                ${card.isFiveStar ? '★★★★★' : '★★★★'}
+                            </div>
+                            <div class="absolute top-3 right-3 bg-black/50 px-2 py-1 rounded text-xs">
+                                ${index + 1}/${total}
+                            </div>
+                        </div>
+                        <div class="p-5">
+                            <h3 class="text-xl font-bold mb-2">${card.name}</h3>
+                            <div class="bg-white/5 rounded-lg p-3 mb-4">
+                                <div class="text-sm text-gray-300 mb-1">英语短语</div>
+                                <div class="font-medium">${characterInfo.phrase}</div>
+                                <div class="text-xs text-gray-400 mt-2 italic">${characterInfo.sentence}</div>
+                            </div>
+                            <button id="next-card-btn" class="w-full bg-fiveStar hover:bg-fiveStar/80 text-bgDark font-bold py-2 px-4 rounded-lg transition-all">
+                                ${index < total - 1 ? '下一张' : '完成'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                dom.magnifyModal.classList.remove('hidden');
+                setTimeout(() => {
+                    dom.modalContent.classList.add('modal-enter');
+                }, 10);
+                
+                // 播放角色语音
+                const voiceElement = document.getElementById(
+                    card.name.toLowerCase().replace(/\s+/g, '-') + '-voice'
+                ) || document.getElementById('default-4star-voice');
+                
+                if (voiceElement) {
+                    voiceElement.currentTime = 0;
+                    voiceElement.play().catch(e => console.log("语音播放失败:", e));
+                }
+                
+                const nextBtn = document.getElementById('next-card-btn');
+                const closeModal = () => {
+                    dom.modalContent.classList.remove('modal-enter');
+                    dom.modalContent.classList.add('modal-exit');
+                    
+                    setTimeout(() => {
+                        dom.magnifyModal.classList.add('hidden');
+                        dom.modalContent.classList.remove('modal-exit');
+                        resolve();
+                    }, 300);
+                    
+                    nextBtn.removeEventListener('click', handleNextClick);
+                    dom.magnifyModal.removeEventListener('click', handleModalClick);
+                };
+                
+                const handleNextClick = () => closeModal();
+                
+                const handleModalClick = (e) => {
+                    if (e.target === dom.magnifyModal) {
+                        closeModal();
+                    }
+                };
+                
+                nextBtn.addEventListener('click', handleNextClick);
+                dom.magnifyModal.addEventListener('click', handleModalClick);
+            });
+        }
+
+        // 显示角色大图详情
+        function showCharacterDetail(characterName) {
+            return new Promise(resolve => {
+                const characterInfo = phraseDatabase[characterName];
+                const isFiveStar = ["Sangonomiya Kokomi", "Keqing", "Qiqi", "Jean", "Mona", "Tighnari", "Dehya", "Ningguang", "Furina"].includes(characterName);
+                
+                dom.detailModalContent.innerHTML = `
+                    <div class="relative">
+                        <div class="w-full h-[50vh] sm:h-[60vh] ${isFiveStar ? 'bg-gradient-to-b from-amber-900/30 to-fiveStar/10' : 'bg-gradient-to-b from-gray-900/30 to-fourStar/10'}">
+                            <img src="${characterInfo.imageUrl}" alt="${characterName}" class="w-full h-full object-contain">
+                            <div class="${isFiveStar ? 'text-fiveStar' : 'text-fourStar'} absolute top-3 left-3 text-lg">
+                                ${isFiveStar ? '★★★★★' : '★★★★'}
+                            </div>
+                            <button id="close-detail-btn" class="absolute top-3 right-3 bg-black/50 p-2 rounded-full text-white hover:bg-black/70 transition-colors">
+                                <i class="fa fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="p-6">
+                            <h3 class="text-2xl font-bold mb-4">${characterName}</h3>
+                            <div class="bg-white/5 rounded-lg p-4 mb-6">
+                                <div class="text-sm text-gray-300 mb-2">英语短语</div>
+                                <div class="text-xl font-medium mb-4">${characterInfo.phrase}</div>
+                                <div class="text-gray-300 italic">${characterInfo.sentence}</div>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <span class="text-sm text-gray-400">拥有数量:</span>
+                                    <span class="ml-2 font-medium">${ownedCharacters[characterName]} 张</span>
+                                </div>
+                                <button id="play-voice-btn" class="bg-primary/30 hover:bg-primary/50 text-white font-medium py-2 px-4 rounded-lg transition-all flex items-center">
+                                    <i class="fa fa-volume-up mr-2"></i> 播放语音
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                dom.characterDetailModal.classList.remove('hidden');
+                setTimeout(() => {
+                    dom.detailModalContent.classList.add('modal-enter');
+                }, 10);
+                
+                const closeBtn = document.getElementById('close-detail-btn');
+                const playVoiceBtn = document.getElementById('play-voice-btn');
+                
+                const closeModal = () => {
+                    dom.detailModalContent.classList.remove('modal-enter');
+                    dom.detailModalContent.classList.add('modal-exit');
+                    
+                    setTimeout(() => {
+                        dom.characterDetailModal.classList.add('hidden');
+                        dom.detailModalContent.classList.remove('modal-exit');
+                        resolve();
+                    }, 300);
+                    
+                    closeBtn.removeEventListener('click', handleCloseClick);
+                    playVoiceBtn.removeEventListener('click', handlePlayVoice);
+                    dom.characterDetailModal.removeEventListener('click', handleModalClick);
+                };
+                
+                const handleCloseClick = () => closeModal();
+                
+                const handlePlayVoice = () => {
+                    const voiceElement = document.getElementById(
+                        characterName.toLowerCase().replace(/\s+/g, '-') + '-voice'
+                    ) || document.getElementById('default-4star-voice');
+                    
+                    if (voiceElement) {
+                        voiceElement.currentTime = 0;
+                        voiceElement.play().catch(e => console.log("语音播放失败:", e));
+                    }
+                };
+                
+                const handleModalClick = (e) => {
+                    if (e.target === dom.characterDetailModal) {
+                        closeModal();
+                    }
+                };
+                
+                closeBtn.addEventListener('click', handleCloseClick);
+                playVoiceBtn.addEventListener('click', handlePlayVoice);
+                dom.characterDetailModal.addEventListener('click', handleModalClick);
+            });
+        }
+
+        // 依次展示稀有卡牌
+        async function showRareCardsSequentially() {
+            for (let i = 0; i < rareCards.length; i++) {
+                currentRareIndex = i;
+                await showRareCardModal(rareCards[i], i, rareCards.length);
+            }
+            rareCards = [];
+            currentRareIndex = 0;
+        }
+
+        // 初始化游戏
+        function initGame() {
+            initBackgroundMusic();
+            preloadImages();
+            updateCounters();
+            dom.pullBtn.addEventListener('click', startPulling);
+        }
+
+        // 更新计数器显示
+        function updateCounters() {
+            dom.fiveStarCountEl.textContent = fiveStarCount;
+            dom.fourStarCountEl.textContent = fourStarCount;
+            dom.pullCountEl.textContent = pulledCount;
+            dom.fiveStarPityEl.textContent = `${fiveStarPity}/80`;
+            dom.fourStarPityEl.textContent = `${fourStarPity}/10`;
+            
+            let fiveStarRate = 0.6;
+            if (fiveStarPity >= 74) {
+                fiveStarRate = (fiveStarPity - 73) * 6 + 0.6;
+            } else if (fiveStarPity >= 70) {
+                fiveStarRate = 3;
+            }
+            dom.fiveStarRateEl.textContent = fiveStarRate.toFixed(2) + '%';
+        }
+
+        // 随机获取一个单词
+        function getRandomWord() {
+            const randomIndex = Math.floor(Math.random() * wordBank.length);
+            return wordBank[randomIndex];
+        }
+
+        // 单次抽卡逻辑
+        async function singlePull() {
+            pulledCount++;
+            fiveStarPity++;
+            fourStarPity++;
+            
+            let isFiveStar = false;
+            let fiveStarRate = 0.6;
+            
+            if (fiveStarPity >= 80) {
+                isFiveStar = true;
+            } else if (fiveStarPity >= 74) {
+                fiveStarRate = (fiveStarPity - 73) * 6 + 0.6;
+            } else if (fiveStarPity >= 70) {
+                fiveStarRate = 3;
+            }
+            
+            if (!isFiveStar) {
+                isFiveStar = Math.random() * 100 < fiveStarRate;
+            }
+            
+            let isFourStar = false;
+            if (fourStarPity >= 10) {
+                isFourStar = !isFiveStar;
+            } else if (!isFiveStar) {
+                isFourStar = Math.random() * 100 < 13;
+            }
+            
+            if (isFiveStar) {
+                fiveStarPity = 0;
+                fourStarPity = 0;
+            } else if (isFourStar) {
+                fourStarPity = 0;
+            }
+            
+            if (isFiveStar || isFourStar) {
+                let characterName;
+                const fiveStarCharacters = ["Sangonomiya Kokomi", "Keqing", "Qiqi", "Jean", "Mona", "Tighnari", "Dehya", "Ningguang", "Furina"];
+                const fourStarCharacters = ["Faruzan", "Rosaria", "Yanfei", "Bennett", "Xiangling", "Barbara", "Xingqiu", "Fischl", "Noelle", "Diona", "Sayu", "Sucrose", "Thoma", "Chongyun", "Beidou"];
+                
+                if (isFiveStar) {
+                    const randomIndex = Math.floor(Math.random() * fiveStarCharacters.length);
+                    characterName = fiveStarCharacters[randomIndex];
+                    fiveStarCount++;
+                    dom.fiveStarSound.currentTime = 0;
+                    dom.fiveStarSound.play().catch(e => console.log("音效播放失败:", e));
+                } else {
+                    const randomIndex = Math.floor(Math.random() * fourStarCharacters.length);
+                    characterName = fourStarCharacters[randomIndex];
+                    fourStarCount++;
+                    dom.fourStarSound.currentTime = 0;
+                    dom.fourStarSound.play().catch(e => console.log("音效播放失败:", e));
+                }
+                
+                if (!ownedCharacters[characterName]) {
+                    ownedCharacters[characterName] = 1;
+                } else {
+                    ownedCharacters[characterName]++;
+                }
+                
+                const change = isFiveStar ? -10 : -3;
+                const actualChange = Math.max(change, -wordList.length);
+                wordList = wordList.slice(0, wordList.length + actualChange);
+                
+                if (actualChange < 0) {
+                    dom.wordDecreaseSound.currentTime = 0;
+                    dom.wordDecreaseSound.play().catch(e => console.log("音效播放失败:", e));
+                    await showWordChangeAnimation(actualChange);
+                }
+                
+                rareCards.push({
+                    name: characterName,
+                    isFiveStar: isFiveStar
+                });
+                
+                return {
+                    character: {
+                        name: characterName,
+                        isFiveStar: isFiveStar
+                    },
+                    wordChange: {
+                        change: actualChange,
+                        word: null
+                    }
+                };
+            } else {
+                const newWord = getRandomWord();
+                wordList.push(newWord);
+                
+                dom.wordIncreaseSound.currentTime = 0;
+                dom.wordIncreaseSound.play().catch(e => console.log("音效播放失败:", e));
+                await showWordChangeAnimation(1);
+                
+                return {
+                    character: null,
+                    wordChange: {
+                        change: 1,
+                        word: newWord
+                    }
+                };
+            }
+        }
+
+        // 开始抽卡
+        async function startPulling() {
+            if (isPulling) return;
+            isPulling = true;
+            
+            const wishCount = parseInt(dom.wishCountInput.value);
+            if (wishCount < 1 || wishCount > 10) {
+                isPulling = false;
+                return;
+            }
+
+            dom.pullBtn.disabled = true;
+            dom.pullBtn.classList.add('opacity-70', 'cursor-not-allowed');
+            
+            try {
+                rareCards = [];
+                
+                dom.pullSound.play().catch(e => console.log("音效播放失败:", e));
+                
+                dom.wishArea.innerHTML = '';
+                dom.wishArea.style.display = 'flex';
+                dom.wishArea.style.flexDirection = 'row';
+                dom.wishArea.style.overflowX = 'auto';
+                dom.wishArea.style.overflowY = 'hidden';
+                dom.wishArea.style.justifyContent = 'flex-start';
+                dom.wishArea.style.paddingBottom = '20px';
+                
+                if (wishCount === 10) {
+                    const tenPullHint = document.createElement('div');
+                    tenPullHint.className = 'absolute top-2 left-1/2 transform -translate-x-1/2 bg-fiveStar/20 text-fiveStar px-4 py-1 rounded-full text-sm z-10';
+                    tenPullHint.textContent = '十连抽！必出四星或以上角色';
+                    dom.wishArea.appendChild(tenPullHint);
+                }
+                
+                for (let i = 0; i < wishCount; i++) {
+                    const pullCard = document.createElement('div');
+                    pullCard.className = 'relative w-48 h-64 bg-primary rounded-lg pull-animation mx-2 overflow-hidden card-flip will-change-transform contain-paint flex-shrink-0';
+                    pullCard.innerHTML = `
+                        <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary to-purple-900">
+                            <i class="fa fa-gift text-5xl text-white/70"></i>
+                        </div>
+                    `;
+                    
+                    dom.wishArea.style.position = 'relative';
+                    dom.wishArea.appendChild(pullCard);
+                    
+                    await new Promise(resolve => {
+                        const handleAnimationEnd = () => {
+                            pullCard.removeEventListener('animationend', handleAnimationEnd);
+                            resolve();
+                        };
+                        pullCard.addEventListener('animationend', handleAnimationEnd);
+                    });
+                    
+                    const result = await singlePull();
+                    const { character, wordChange } = result;
+                    
+                    if (character) {
+                        const characterInfo = phraseDatabase[character.name];
+                        pullCard.innerHTML = `
+                            <div class="w-full h-full bg-gradient-to-br ${character.isFiveStar ? 'from-amber-900 to-fiveStar/20' : 'from-gray-800 to-fourStar/20'} p-2">
+                                <div class="text-center">
+                                    <div class="${character.isFiveStar ? 'text-fiveStar' : 'text-fourStar'} text-sm">
+                                        ${character.isFiveStar ? '★★★★★' : '★★★★'}
+                                    </div>
+                                    <img src="${characterInfo.imageUrl}" alt="${character.name}" class="w-24 h-32 mx-auto object-cover rounded mt-2">
+                                    <div class="text-xs mt-1">${character.name}</div>
+                                    <div class="mt-2 text-xs ${wordChange.change < 0 ? 'text-green-400' : 'text-red-400'}">
+                                        ${wordChange.change < 0 ? '−' : '+'}${Math.abs(wordChange.change)} 单词
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        if (character.isFiveStar) {
+                            pullCard.classList.add('card-glow');
+                        } else {
+                            pullCard.classList.add('four-star-glow');
+                        }
+                        
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                    } else {
+                        pullCard.innerHTML = `
+                            <div class="w-full h-full flex items-center justify-center bg-gray-800">
+                                <div class="text-center">
+                                    <i class="fa fa-times text-3xl text-gray-500 mb-2"></i>
+                                    <div class="text-xs text-red-400">+1 单词</div>
+                                    <div class="text-xs mt-1 text-gray-300">${wordChange.word.word}</div>
+                                </div>
+                            </div>
+                        `;
+                        await new Promise(resolve => setTimeout(resolve, 200));
+                    }
+                }
+                
+                if (rareCards.length > 0) {
+                    await showRareCardsSequentially();
+                }
+                
+                if (wishCount > 1) {
+                    const scrollHint = document.createElement('div');
+                    scrollHint.className = 'absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-black/50 text-white px-3 py-1 rounded-full text-xs scroll-hint flex items-center';
+                    scrollHint.innerHTML = `
+                        <i class="fa fa-arrows-h mr-1"></i> 左右滑动查看
+                    `;
+                    dom.wishArea.appendChild(scrollHint);
+                    
+                    setTimeout(() => {
+                        scrollHint.style.opacity = '0';
+                        scrollHint.style.transition = 'opacity 0.5s ease';
+                        setTimeout(() => scrollHint.remove(), 500);
+                    }, 3000);
+                }
+                
+            } finally {
+                dom.pullBtn.disabled = false;
+                dom.pullBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+                isPulling = false;
+                
+                updateCounters();
+                updateCharacterList();
+                
+                dom.wishArea.style.overflowX = 'auto';
+                dom.wishArea.style.justifyContent = 'flex-start';
+            }
+        }
+
+        // 更新角色列表
+        function updateCharacterList() {
+            dom.characterList.innerHTML = '';
+            
+            if (Object.keys(ownedCharacters).length === 0) {
+                const emptyHint = document.createElement('div');
+                emptyHint.className = 'text-center text-gray-400 col-span-full py-8';
+                emptyHint.textContent = '暂无角色，快去抽卡吧！';
+                dom.characterList.appendChild(emptyHint);
+                return;
+            }
+            
+            Object.keys(ownedCharacters).forEach(characterName => {
+                const characterInfo = phraseDatabase[characterName];
+                const isFiveStar = ["Sangonomiya Kokomi", "Keqing", "Qiqi", "Jean", "Mona", "Tighnari", "Dehya", "Ningguang", "Furina"].includes(characterName);
+                
+                const characterCard = document.createElement('div');
+                characterCard.className = `bg-white/5 backdrop-blur-sm rounded-xl p-4 character-appear border ${isFiveStar ? 'border-fiveStar/30' : 'border-fourStar/30'} character-card-hover`;
+                characterCard.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <img src="${characterInfo.imageUrl}" alt="${characterName}" class="w-16 h-20 object-cover rounded">
+                        <div class="flex-1">
+                            <div class="flex items-center">
+                                <span class="font-medium">${characterName}</span>
+                                <span class="ml-2 ${isFiveStar ? 'text-fiveStar' : 'text-fourStar'} text-xs">
+                                    ${isFiveStar ? '★★★★★' : '★★★★'}
+                                </span>
+                            </div>
+                            <div class="text-xs text-gray-300 mt-1">
+                                <div>短语: ${characterInfo.phrase}</div>
+                                <div class="mt-1">例句: ${characterInfo.sentence}</div>
+                            </div>
+                        </div>
+                        <div class="bg-white/10 rounded-full w-6 h-6 flex items-center justify-center text-xs">
+                            ${ownedCharacters[characterName]}
+                        </div>
+                    </div>
+                `;
+                
+                characterCard.addEventListener('click', () => {
+                    showCharacterDetail(characterName);
+                });
+                
+                dom.characterList.appendChild(characterCard);
+            });
+        }
+
+        // 初始化游戏
+        window.addEventListener('DOMContentLoaded', initGame);
+    </script>
+</body></html>
